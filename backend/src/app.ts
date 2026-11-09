@@ -1,4 +1,3 @@
-
 import express, { Application } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -17,15 +16,17 @@ import authRoutes from "./routes/authRoutes";
 import propertyRoutes from "./routes/propertyRoutes";
 import inquiryRoutes from "./routes/inquiryRoutes";
 
+// Initialize Express application
 const app: Application = express();
 
-// 1. Security headers
-app.use(helmet());
+// ==========================================
+// 1. CORS CONFIGURATION
+// ==========================================
 
-// 2. CORS configuration
 const allowedOrigins = [
   env.CLIENT_URL,
   "http://localhost:3000",
+  "https://home-touch-hu9o.onrender.com",
 ]
   .filter((origin): origin is string => Boolean(origin))
   .map((origin) => origin.replace(/\/$/, ""));
@@ -33,7 +34,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without an Origin header
+      // Allow requests without Origin (Postman, server-to-server)
       if (!origin) {
         return callback(null, true);
       }
@@ -44,46 +45,77 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(
-        new Error(`CORS blocked for origin: ${origin}`)
-      );
+      console.error("Blocked CORS origin:", origin);
+
+      // Reject unauthorized origins without generating an application 500
+      return callback(null, false);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// 3. Body parsing
+// ==========================================
+// 2. SECURITY MIDDLEWARE
+// ==========================================
+
+app.use(helmet());
+
+// ==========================================
+// 3. BODY PARSING MIDDLEWARE
+// ==========================================
+
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// 4. Swagger UI
+// ==========================================
+// 4. SWAGGER API DOCUMENTATION
+// ==========================================
+
 app.use(
   "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec)
 );
 
-// 5. OpenAPI JSON
+// OpenAPI JSON
 app.get("/api-docs.json", (_req, res) => {
-  res.status(200).json(swaggerSpec);
+  res.json(swaggerSpec);
 });
 
-// 6. Health check
+// ==========================================
+// 5. HEALTH CHECK
+// ==========================================
+
 app.get("/health", (_req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: "HomeTouch API is running",
     status: "ok",
   });
 });
 
-// 7. API routes
+// ==========================================
+// 6. API ROUTES
+// ==========================================
+
+// Authentication
 app.use("/api/auth", authRoutes);
+
+// Property CRUD operations
 app.use("/api/properties", propertyRoutes);
+
+// Property inquiries
 app.use("/api/inquiries", inquiryRoutes);
 
-// 8. Error handling
+// ==========================================
+// 7. ERROR HANDLING
+// ==========================================
+
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Export application
 export default app;
