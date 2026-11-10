@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Red Sand Group | Real Estate',
+  title: 'Home Touch | Real Estate',
   description: 'Find your next home — buy or rent properties across India.',
 };
 
